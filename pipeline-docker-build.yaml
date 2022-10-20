@@ -1,0 +1,55 @@
+resources:
+  repositories:
+    # YAML files repository
+  - repository: pipeline-docker-build
+    type: github
+    endpoint: 'MacmillerMartins'
+    name: MacmillerMartins/pipeline-docker-build
+
+variables:
+# Build Version
+- name: versionNumberMajor
+  value: '1'
+- name: versionNumberMinor
+  value: '1'
+- name: versionNumberPatch
+  value: '1'
+# Docker Hub
+- name: repoDockerHubName
+  value: 'macmiller'
+- name: dockerHubServiceConnect
+  value: 'sc-dockerhub'
+# Agent Azure DevOps
+- name: imageAgentAz
+  value: 'ubuntu-latest'
+
+stages:
+- stage: BuildandPublish
+  displayName: Build and Publish
+  dependsOn: Tests
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: BuildandPublish
+    displayName: Build and Publish
+    pool:
+      vmImage: '$(imageAgentAz)'
+    steps:
+    - task: Docker@2
+      displayName: Docker Build
+      inputs:
+        containerRegistry: '$(dockerHubServiceConnect)'
+        repository: '$(repoDockerHubName)/$(system.teamProject)-hlg'
+        command: 'build'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          $(versionNumberMajor).$(versionNumberMinor).$(versionNumberPatch)
+          latest
+    - task: Docker@2
+      displayName: Docker Publish
+      inputs:
+        containerRegistry: '$(dockerHubServiceConnect)'
+        repository: '$(repoDockerHubName)/$(system.teamProject)-hlg'
+        command: 'push'
+        tags: |
+          $(versionNumberMajor).$(versionNumberMinor).$(versionNumberPatch)
+          latest
